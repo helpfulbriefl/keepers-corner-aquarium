@@ -6,8 +6,7 @@ An interactive 3D reef aquarium in a lived-in keeper's corner: three clownfish (
 
 The whole scene is one self-contained `index.html` built on three.js r160. There's nothing to install and no assets to download.
 
-**▶ Live demo:** https://helpfulbriefl.github.io/keepers-corner-aquarium/  
-**▶ Instant preview:** https://raw.githack.com/helpfulbriefl/keepers-corner-aquarium/main/index.html
+**▶ Live demo:** https://helpfulbriefl.github.io/keepers-corner-aquarium/
 
 > 🇷🇺 **Кратко.** Интерактивный 3D-аквариум в одном HTML-файле (three.js r160). Открой `index.html` в браузере. Нужен интернет, потому что three.js загружается с CDN. В папке `prompt/` лежит улучшенный промт v2, по которому можно сгенерировать такую сцену в любой LLM.
 
