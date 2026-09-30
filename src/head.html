@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keeper's Corner — Interactive 3D Aquarium · Test by @yumi_acess</title>
+<style>
+  :root { color-scheme: dark; --ink: #f6dfbd; --navy: rgba(4, 15, 21, 0.94); --line: rgba(237, 179, 140, 0.45); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #02070d; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #app { position: fixed; inset: 0; overflow: hidden; }
+  #scene-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
+  #vignette { position: absolute; inset: 0; pointer-events: none; z-index: 5;
+    background: radial-gradient(ellipse at 50% 46%, rgba(0,0,0,0) 55%, rgba(1,5,10,0.55) 100%); }
+
+  /* ---- Mandatory author credit (never hidden, never faded) ---- */
+  #credit-badge { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 40;
+    width: max-content; max-width: calc(100vw - 24px); padding: 9px 20px; border: 1px solid var(--line);
+    border-radius: 12px; background: var(--navy); opacity: 1; text-align: center; }
+  #credit-text { margin: 0; font-size: clamp(24px, 2.1vw, 30px); font-weight: 700; line-height: 1.2; color: var(--ink);
+    letter-spacing: 0.01em; white-space: nowrap; }
+  @media (max-width: 600px) { #credit-badge { top: 10px; padding: 8px 14px; } #credit-text { font-size: clamp(20px, 5.6vw, 24px); } }
+
+  /* ---- Optional UI (dock, hint, caption, toast) ---- */
+  .optional-ui { transition: opacity 0.35s ease; }
+  body.ui-hidden .optional-ui { opacity: 0; pointer-events: none; visibility: hidden; }
+  #caption { position: absolute; top: 20px; left: 20px; z-index: 20; color: rgba(246, 223, 189, 0.86); font-size: 14px; line-height: 1.35;
+    padding: 8px 12px; border-radius: 10px; background: rgba(4, 15, 21, 0.55); border: 1px solid rgba(237,179,140,0.18); white-space: nowrap; }
+  #caption b { color: #f6dfbd; font-weight: 650; }
+  @media (max-width: 1040px) { #caption { display: none; } }
+  #dock { position: absolute; left: 50%; width: max-content; bottom: 14px; transform: translateX(-50%); z-index: 30; display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 6px; padding: 7px; max-width: calc(100vw - 20px); border-radius: 14px; background: rgba(4, 15, 21, 0.72);
+    border: 1px solid rgba(237, 179, 140, 0.22); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .btn { appearance: none; border: 1px solid rgba(237, 179, 140, 0.28); background: rgba(20, 42, 54, 0.85); color: #f3e3c8;
+    font: 600 14px/1 system-ui, sans-serif; padding: 0 13px; min-height: 40px; min-width: 44px; border-radius: 9px; cursor: pointer; white-space: nowrap; }
+  .btn:hover { background: rgba(34, 66, 82, 0.95); }
+  .btn:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }
+  .btn[aria-pressed="true"] { background: rgba(214, 150, 92, 0.3); border-color: rgba(246, 205, 150, 0.75); }
+  .btn kbd { font: 600 11px/1 ui-monospace, Menlo, monospace; opacity: 0.55; margin-left: 6px; }
+  @media (max-width: 600px) { #dock { bottom: 8px; gap: 5px; padding: 6px; } .btn { font-size: 13px; padding: 0 10px; min-height: 44px; } .btn kbd { display: none; } }
+  #hint { position: absolute; left: 50%; width: max-content; transform: translateX(-50%); z-index: 25; bottom: 76px; color: #eaf6ff; font-size: 14px; text-align: center;
+    padding: 8px 14px; border-radius: 10px; background: rgba(4, 15, 21, 0.62); max-width: calc(100vw - 32px); transition: opacity 1.2s ease; pointer-events: none; }
+  #hint.gone { opacity: 0; }
+  #toast { position: absolute; left: 50%; width: max-content; transform: translate(-50%, 8px); z-index: 26; color: #fff3df; font-size: 14px; padding: 7px 13px; border-radius: 9px;
+    background: rgba(8, 26, 36, 0.86); border: 1px solid rgba(237, 179, 140, 0.3); opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease; pointer-events: none; max-width: calc(100vw - 32px); }
+  #toast.on { opacity: 1; transform: translate(-50%, 0); }
+  #tip { position: absolute; z-index: 35; pointer-events: none; color: #fff; font-size: 13px; padding: 5px 9px; border-radius: 7px; background: rgba(4, 15, 21, 0.85);
+    border: 1px solid rgba(237, 179, 140, 0.3); opacity: 0; transition: opacity 0.15s ease; white-space: nowrap; }
+  #tip.on { opacity: 1; }
+  #showui { position: absolute; right: 14px; bottom: 14px; z-index: 31; display: none; }
+  body.ui-hidden #showui { display: inline-flex; align-items: center; }
+  #fallback { position: absolute; inset: 0; display: none; place-items: center; color: #f6dfbd; font-size: 16px; text-align: center; padding: 24px; z-index: 12; }
+  @media (prefers-reduced-motion: reduce) { .optional-ui, #toast, #hint { transition-duration: 0.01s !important; } }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app">
+  <div id="vignette"></div>
+  <div id="credit-badge" role="note" aria-label="Author credit"><p id="credit-text">Test by @yumi_acess</p></div>
+  <div id="caption" class="optional-ui"><b>Keeper's Corner</b><br>3 × <i>Amphiprion ocellaris</i>, one anemone,<br>and Milo, who is not in charge of feeding.</div>
+  <div id="hint" class="optional-ui">Drag to explore • Scroll to zoom • Double-click the water to feed • Try the cat and the room objects</div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="tip"></div>
+  <nav id="dock" class="optional-ui" aria-label="Aquarium controls">
+    <button class="btn" id="b-feed" type="button">Feed fish<kbd>F</kbd></button>
+    <button class="btn" id="b-night" type="button" aria-pressed="false">Night<kbd>N</kbd></button>
+    <button class="btn" id="b-pause" type="button" aria-pressed="false">Pause<kbd>Space</kbd></button>
+    <button class="btn" id="b-view" type="button">Reef view<kbd>C</kbd></button>
+    <button class="btn" id="b-reset" type="button">Reset camera<kbd>R</kbd></button>
+    <button class="btn" id="b-hide" type="button">Hide UI<kbd>H</kbd></button>
+  </nav>
+  <button class="btn" id="showui" type="button">Show controls<kbd>H</kbd></button>
+  <div id="fallback">This scene needs WebGL 2 and an internet connection for the Three.js CDN.</div>
+</div>
+<script>
+/* classic (non-module) guard: explains a blank screen instead of leaving the user guessing */
+(function () {
+  function fb(msg) { var el = document.getElementById('fallback'); if (!el) return; if (msg) el.textContent = msg; el.style.display = 'grid'; }
+  try { var c = document.createElement('canvas'); if (!(c.getContext('webgl2'))) { window.__aqNoGL = true; fb('This scene needs WebGL 2, which this browser or device does not provide.'); } } catch (e) {}
+  setTimeout(function () { if (!window.__aqStarted) fb(); }, 12000);
+})();
+</script>
+<script type="module">
